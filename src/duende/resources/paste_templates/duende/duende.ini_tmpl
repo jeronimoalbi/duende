@@ -1,0 +1,137 @@
+# -*- coding: utf-8 -*-
+[DEFAULT]
+# Default locale code to use
+default_locale = en_US
+
+# Enable or disable application debugging.
+# Disable in production envorinments.
+debug = true
+debug.requests = true
+
+# Default URL to go when "url.prefix" is requested
+url.default = /root/index/
+
+# URL prefix for all applications
+# Change if you need to access applications inside a base URL other than /
+url.prefix = /
+
+# File where each application is mapped to a base URL
+# Comment: When url.prefix id not /, it will always be prefixed to these URL
+url.file = %(here)s/urls.ini
+
+# Base URI where static files for each app are located
+static.uri = /static
+
+# Where so store session information.
+# Valid types: file, dbm, memory, ext:memcached, ext:database, ext:google
+session.type = memory
+
+# When true omit the expires field from the Set-Cookie: header,
+# Signaling the cookie should be discarded when the browser closes
+session.cookie_expires = true
+
+# Cookie key name
+session.key = duende
+
+# Auto save session after request is finished
+session.auto = true
+
+# Used for session.type that use file backends, like dbm for
+# example, to set where store data
+session.data_dir = %(here)s/var/sessions/data
+
+# Used for every backend to coordinate locking
+session.lock_dir = %(here)s/var/sessions/lock
+
+# Used for ext:memcached or ext:database session.type .
+# For database a valid SQLAlchemy database string should be used as url
+#session.url =
+
+# Session secret seed to use as key for HMAC (CHANGE THIS VALUE !!)
+session.secret = msofg.36fgg5
+
+# Instead of session.secret is possible to use AES encription to avoid
+# user from decoding cookie session data. To use this you need to install
+# pycryptopp or PyCrypto library
+# If you use this functionality REMEMBER TO CHANGE KEY VALUES !!
+#session.encrypt_key = fm8d,ewp+3si9fmjsb%dfb82nef0dksm822k3s
+#session.validate_key = cvmnwej3n20us1
+
+# When true, browsers will send cookie only over SSL
+session.secure = false
+
+# Timeout of session in seconds. By default session won't expire
+#session.timeout = 2700
+
+# Main domain the cookie should be valid for. For example, if a cookie
+# should be valid under www.nowhere.com and files.nowhere.com then it
+# should be set to .nowhere.com .
+# By default cookie is valid for the whole current domain.
+#session.cookie_domain =
+
+# Directory for templates cache
+template.cache_dir = %(here)s/var/templates/cache
+
+# Database connection URL
+# For example:
+#     sqlite:///%(here)s/duende.sqlite
+#     postgresql://username:password@host:port/database
+database.url = sqlite://%(here)s/duende.sqlite
+
+# Number of connection to keep open
+#database.pool_size = 5
+
+# Database encoding to use
+database.encoding = utf8
+
+# When true engine log all statements
+database.echo = false
+
+[composite:main]
+use = egg:Paste#urlmap
+/ = duende
+/static = duende_static
+
+[app:duende]
+paste.app_factory = duende.app:app_factory
+
+[app:duende_static]
+paste.app_factory = duende.app:static_app_factory
+
+[server:main]
+use = egg:Paste#http
+host = 0.0.0.0
+port = 8080
+
+[loggers]
+keys = root, paste.httpserver, sqlalchemy.dialects.postgresql
+
+[handlers]
+keys = console
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = DEBUG
+handlers = console
+
+[logger_paste.httpserver]
+level = INFO
+handlers =
+qualname = paste.httpserver
+
+[logger_sqlalchemy.dialects.postgresql]
+# PostgreSQL NOTICE logging
+level = INFO
+handlers =
+qualname = sqlalchemy.dialects.postgresql
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(asctime)s %(levelname)-5.5s [%(name)s] %(message)s

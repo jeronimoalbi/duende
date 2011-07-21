@@ -1,0 +1,36 @@
+# -*- coding: utf8 -*-
+try:
+    from setuptools import setup, find_packages
+except ImportError:
+    from ez_setup import use_setuptools
+    use_setuptools()
+    from setuptools import setup, find_packages
+
+setup(
+    name='${project}',
+    version='${version}',
+    description=${repr(description)},
+    author=${repr(author)},
+    author_email=${repr(author_email)},
+    install_requires=[
+        "duende>=${duende_version}",
+    ],
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
+    package_data={
+        '${package}': [
+            'resources/static/*',
+            'resources/locale/*',
+            'resources/templates/*',
+        ],
+    },
+    include_package_data=True,
+    zip_safe=${zip_safe},
+    message_extractors={
+        'src/${package}': [
+            ('**.py', 'python', None),
+            ('resources/templates/**', 'jinja2', None),
+            ('resources/static/**', 'ignore', None),
+        ],
+    },
+)

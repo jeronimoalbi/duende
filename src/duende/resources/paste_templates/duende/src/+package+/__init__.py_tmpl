@@ -1,0 +1,20 @@
+# -*- coding: utf8 -*-
+
+from duende import guess_version
+from duende.lib import urls
+from duende.lib.i18n import translation
+
+
+__version__ = guess_version('${package}', __file__)
+
+#common tanslator for current application domain
+_ = translation.get_translation_fn(__name__)
+
+#plural form translator for current application domain
+ngettext = translation.get_plural_translation_fn(__name__)
+
+
+def url(url, app='${package}'):
+    """Get a ${package} url"""
+
+    return urls.url(app, url)

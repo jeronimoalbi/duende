@@ -1,0 +1,7 @@
+# -*- coding: utf-8 -*-
+#
+# This file maps a applications to base URLs
+# that will be used to generate URL dynamically.
+#
+[DEFAULT]
+#app_name = /base_url
