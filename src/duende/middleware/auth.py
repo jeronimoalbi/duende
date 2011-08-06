@@ -49,12 +49,10 @@ class AuthMiddleware:
         self.config = config
         self.debug = asbool(self.config['debug'])
         self.default_public = asbool(self.config['auth.default_public'])
+        self.login_url = urls.url(self.config.get('auth.login'))
 
     def _handle_unauthorized(self, environ):
         LOG.info(u'Unauthorized request from %s', environ['REMOTE_ADDR'])
-        #TODO: Move to __init__ after implement config object
-        #independent of paste to avoid evaluation in each request
-        login_url = urls.url(self.config.get('auth.login'))
 
         is_xmlhttp_request = jsonrpc.is_xmlhttp_request(environ)
         #TODO: Add basic auth for JSON requests
@@ -63,9 +61,9 @@ class AuthMiddleware:
 
             raise jsonrpc.JSONRPCUnauthorized(compact=compact_json)
         elif login_url:
-            LOG.debug(u'Redirecting to login page %s', login_url)
+            LOG.debug(u'Redirecting to login page %s', self.login_url)
             #redirect non JSON requests to login page
-            raise httpexc.HTTPFound(location=login_url)
+            raise httpexc.HTTPFound(location=self.login_url)
 
         #when no login page is available and JSON request dont
         #accept JSON response raise HTTP unauthorized
