@@ -8,9 +8,6 @@ default_locale = en_US
 debug = true
 debug.requests = true
 
-# Default URL to go when "url.prefix" is requested
-url.default = /root/index/
-
 # URL prefix for all applications
 # Change if you need to access applications inside a base URL other than /
 url.prefix = /

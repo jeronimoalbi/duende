@@ -78,6 +78,40 @@ def redirect(func):
     return _redirect_wrap
 
 
+def public(func):
+    """Decorator to change view access policy to public
+
+    When access policy is public no user autentication is needed.
+
+    """
+
+    @wraps(func)
+    def _public_wrap(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    _public_wrap.public = True
+
+    return _public_wrap
+
+
+def private(func):
+    """Decorator to change view access policy to private
+
+    When access policy is private user autentication is needed, if no
+    user is available a redirection to ini setting "auth.login" URL
+    is made.
+
+    """
+
+    @wraps(func)
+    def _private_wrap(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    _private_wrap.public = False
+
+    return _private_wrap
+
+
 def text(encoding='utf8'):
     """Decorator for request of type text/plain in a given encoding
 
@@ -103,7 +137,8 @@ def text(encoding='utf8'):
 
             #create response for current template
             response = Response()
-            response.headers['Content-Type'] = 'text/plain'
+            response.headers['Content-Type'] = 'text/plain; charset=' \
+                                             + encoding
             response.charset = encoding
             response.unicode_body = contents
 
@@ -132,7 +167,7 @@ def utf8_text(func):
 
         #create response for current template
         response = Response()
-        response.headers['Content-Type'] = 'text/plain'
+        response.headers['Content-Type'] = 'text/plain; charset=utf-8'
         response.body = contents
 
         return response

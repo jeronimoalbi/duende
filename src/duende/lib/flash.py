@@ -28,7 +28,6 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from duende import SESSION
 from duende import REQUEST
 
 # Flash message types
@@ -41,11 +40,13 @@ WARNING = 'warning'
 class Flash(object):
     """Class to handle flash messages"""
 
-    def __init__(self):
-        if 'flash' not in SESSION:
-            SESSION['flash'] = {}
+    def __init__(self, session_manager):
+        self._session = session_manager
 
-        self._flash = SESSION['flash']
+        if 'flash' not in self._session:
+            self._session['flash'] = {}
+
+        self._flash = self._session['flash']
 
         if 'message_list' in self._flash:
             #copy message list from session
@@ -94,6 +95,14 @@ class Flash(object):
     message_list = property(get_message_list)
     messages_type = property(get_messages_type, set_messages_type)
     display_message_count = property(get_display_message_count)
+
+
+def get_message_list():
+    """Get a list with current request messages"""
+
+    flash = REQUEST.environ['duende.flash']
+
+    return [message for message in flash.get_message_list()]
 
 
 def add_message(message, message_type=None):

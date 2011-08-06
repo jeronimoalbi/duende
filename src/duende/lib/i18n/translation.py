@@ -35,7 +35,7 @@ from functools import partial
 
 from duende import REQUEST
 from duende import get_enabled_app_list
-from duende import get_resource_dir
+from duende.lib.resource import get_resource_dir
 
 
 class TranslationManagerError(Exception):

@@ -28,27 +28,33 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from duende.lib import db
+from threading import local
+from UserDict import DictMixin
 
 
-class DatabaseMiddleware:
-    """Middleware class to manage SQLAlchemy database connections"""
+class Config(local, DictMixin):
+    """Class to handle thread local config values"""
 
-    def __init__(self, application, config):
-        self.application = application
-        self.config = config
-        db.init_database_engine(self.config)
-        db.init_database_session()
+    values = {}
 
-    def __call__(self, environ, start_response):
-        #define a new start_response to allow cleaning db
-        #session after content generation
-        def exit_start_response(status, response_headers, exc_info=None):
-            try:
-                return start_response(status, response_headers, exc_info)
-            finally:
-                #allways clean session connections
-                #TODO: Check if this is not going to mess with other requests
-                db.clean_database_session()
+    def __getitem__(self, key):
+        return self.values[key]
 
-        return self.application(environ, exit_start_response)
+    def __setitem__(self, key, value):
+        self.values[key] = value
+
+    def __delitem__(self, key):
+        del seld.values[key]
+
+    def keys(self):
+        return self.values.keys()
+
+    def copy(self):
+        return self.values.copy()
+
+    def update_values(self, values):
+        self.values.update(values)
+
+
+#global duende config instance
+CONFIG = Config()

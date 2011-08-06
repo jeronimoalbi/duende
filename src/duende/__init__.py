@@ -29,8 +29,6 @@
 #
 
 import os
-import pkg_resources
-import urllib
 
 from pkg_resources import require
 
@@ -38,9 +36,10 @@ from webob import Request
 from webob import Response
 from webob import exc as httpexc
 from paste.registry import StackedObjectProxy
-from paste.deploy.config import CONFIG
 
 from duende.lib import urls
+from duende.lib.config import CONFIG
+
 
 CACHE = StackedObjectProxy(name='cache')
 SESSION = StackedObjectProxy(name='session')
@@ -50,30 +49,10 @@ REQUEST = StackedObjectProxy(name='request')
 def get_enabled_app_list():
     """Get a list with names of all enabled applications."""
 
+
     mapping = urls.get_url_mapping()
 
     return mapping.keys()
-
-
-def get_resource_dir(app_name):
-    """Get directory where application resource files are located."""
-
-    try:
-        info = require(app_name)
-    except pkg_resources.DistributionNotFound, err:
-        #application is not installed so no resource is available
-        return
-
-    info = info[0]
-    location = info.location
-    #for namespaced applications replace dot by directory separator
-    #to allow concatenation to access resources directory
-    if '.' in app_name:
-        app_name = app_name.replace('.', os.sep)
-
-    dir = os.sep.join([location, app_name, 'resources'])
-    if os.path.isdir(dir):
-        return dir
 
 
 def guess_version(app_name, file_name):

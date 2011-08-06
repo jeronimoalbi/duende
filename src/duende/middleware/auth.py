@@ -30,53 +30,57 @@
 
 import logging
 
-import babel
-import formencode
+from paste.deploy.converters import asbool
 
-from duende.lib.i18n import translation
-from duende.lib.i18n import get_http_locales
+from duende import SESSION
+from duende import httpexc
+from duende.lib import urls
+from duende.lib import jsonrpc
+from duende.middleware import MiddlewareException
 
 LOG = logging.getLogger(__name__)
 
 
-class LocaleMiddleware:
-    """Middleware to initialize locale and gettext translation support."""
+class AuthMiddleware:
+    """Middleware to enable form autentication."""
 
     def __init__(self, application, config):
         self.application = application
         self.config = config
+        self.debug = asbool(self.config['debug'])
+        self.default_public = asbool(self.config['auth.default_public'])
 
-    def init_request_translation(self, environ):
-        #TODO: Allow setting locale using request parameters
-        accept_language = environ['HTTP_ACCEPT_LANGUAGE']
-        default_locale = self.config['default_locale']
-        #initialize a locale instance for current request
-        locale_list = get_http_locales(accept_language, default=default_locale)
+    def _handle_unauthorized(self, environ):
+        LOG.info(u'Unauthorized request from %s', environ['REMOTE_ADDR'])
+        #TODO: Move to __init__ after implement config object
+        #independent of paste to avoid evaluation in each request
+        login_url = urls.url(self.config.get('auth.login'))
 
-        #create an save translation manager inside request environment
-        translation_mgr = translation.TranslationManager(locale_list)
-        environ['duende.translation'] = translation_mgr
+        is_xmlhttp_request = jsonrpc.is_xmlhttp_request(environ)
+        #TODO: Add basic auth for JSON requests
+        if is_xmlhttp_request and jsonrpc.request_accept_json(environ):
+            compact_json = not self.debug
 
-    def init_request_locale(self, environ):
-        translation = environ['duende.translation']
-        for code in translation.locale_list:
-            try:
-                environ['duende.locale'] = babel.Locale.parse(code)
-                LOG.debug(u'Using locale %s', code)
-                #after sucessfully setting a locale skip other locales
-                break
-            except babel.UnknownLocaleError:
-                #skip unknown locales
-                pass
+            raise jsonrpc.JSONRPCUnauthorized(compact=compact_json)
+        elif login_url:
+            LOG.debug(u'Redirecting to login page %s', login_url)
+            #redirect non JSON requests to login page
+            raise httpexc.HTTPFound(location=login_url)
 
-    def init_formencode_language(self, environ):
-        language = environ['duende.locale'].language
-        #TODO: Use all request languages instead of only current one
-        formencode.api.set_stdtranslation(languages=[language])
+        #when no login page is available and JSON request dont
+        #accept JSON response raise HTTP unauthorized
+        raise httpexc.HTTPUnauthorized()
 
     def __call__(self, environ, start_response):
-        self.init_request_translation(environ)
-        self.init_request_locale(environ)
-        self.init_formencode_language(environ)
+        view_handler = environ.get('duende.view')
+        is_public_view = getattr(view_handler, 'public', self.default_public)
+        session = environ['beaker.session']
+        user = session.get('user', None)
+        if not (is_public_view or user):
+            self._handle_unauthorized(environ)
+
+        environ['SESSION_ID'] = session.id
+        if user:
+            environ['REMOTE_USER'] = user.get_username()
 
         return self.application(environ, start_response)

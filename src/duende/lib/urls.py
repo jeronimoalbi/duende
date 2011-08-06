@@ -28,15 +28,24 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+import logging
 import urllib
 import ConfigParser
 
-from duende import CONFIG
+from duende.lib.config import CONFIG
 
-__APP_URLS = {}
+LOG = logging.getLogger(__name__)
+
+_MAPPINGS = {}
 
 
-class URLMappingException(Exception):
+class URLException(Exception):
+    """Base class for URL exceptions."""
+
+    pass
+
+
+class URLMappingException(URLException):
     """Base class for URL mapping exceptions."""
 
     pass
@@ -45,17 +54,41 @@ class URLMappingException(Exception):
 def init_application_urls(url_file_name):
     """Init URL to application mapping object."""
 
-    global __APP_URLS
+    global _MAPPINGS
 
+    _MAPPINGS['url'] = {}
+    _MAPPINGS['resource'] = {}
+
+
+    LOG.debug(u'Initializing application url mappings')
     config = ConfigParser.ConfigParser()
     config.read(url_file_name)
-    __APP_URLS.update(config.defaults())
+
+    sections = config.sections()
+
+    if 'apps' not in sections:
+        msg = u'No applications mapped in url file'
+
+        raise URLMappingException(msg)
+
+    for (app_name, url) in config.items('apps'):
+        _MAPPINGS['url'][app_name] = unicode(url, 'utf8')
+
+    #check that a root application is available
+    if '/' not in _MAPPINGS['url'].values():
+        msg = u'No root application mapped in url file'
+
+        raise URLMappingException(msg)
+
+    if 'resources' in sections:
+        for (resource_name, uri) in config.items('resources'):
+            _MAPPINGS['resource'][unicode(resource_name, 'utf8')] = uri
 
 
 def url_apply(url, *args, **kwargs):
-    """Apply GET parameter to a URL
+    """Apply parameters to a URL
 
-    A dictionary with parameter can be used as second argument.
+    A dictionary with parameters can be used as second argument.
     Parameters can also be given as keyword arguments.
 
     WARNING: This function might generate errors when using string replacement
@@ -65,7 +98,7 @@ def url_apply(url, *args, **kwargs):
     """
 
     if '?' not in url:
-        url = url + '?'
+        url = url + u'?'
 
     param_list = []
     param_dict = kwargs
@@ -104,22 +137,42 @@ def url_apply(url, *args, **kwargs):
     return url
 
 
-def url(app_name, url):
+def url(url, *args, **kwargs):
     """Append URL prefix to given URL
 
     A list of arguments or keyword arguments can be given as parameters.
     Depending on the type of string subtitution used in the uri normal args
     or keyword args has to be used.
 
+    URL can be a normal or relative, as well as an application uri
+    like app_name:app_relative_url.
+
     """
 
-    if app_name not in __APP_URLS:
-        msg = u'Application %s not installed' % app_name
-
-        raise URLMappingException(msg)
+    #dont parse full URL
+    if '://' in url:
+        return url
 
     prefix_url = CONFIG['url.prefix']
-    full_url = prefix_url.rstrip('/') + __APP_URLS[app_name].rstrip('/') + url
+    prefix_url = unicode(prefix_url).rstrip('/')
+
+    #check if URL is an application URI
+    if ':' in url and not url.startswith('/'):
+        try:
+            (app_name, relative_url) = url.split(':')
+        except ValueError:
+            raise URLException(u'Invalid app url format')
+
+        if app_name not in _MAPPINGS['url']:
+            msg = u'Application %s not installed' % app_name
+
+            raise URLMappingException(msg)
+
+        app_url = _MAPPINGS['url'][app_name].rstrip('/')
+        full_url = prefix_url + app_url + relative_url
+    else:
+        #just add prefix to given url
+        full_url = prefix_url + url
 
     if args:
         full_url = full_url % args
@@ -132,13 +185,13 @@ def url(app_name, url):
 def get_url_mapping():
     """Get a dictionary with application to URL mappings."""
 
-    if not __APP_URLS:
+    if not _MAPPINGS['url']:
         msg = u'No app mappings available. Call init_application_urls() first.'
 
         raise URLMappingException(msg)
 
     mapping = {}
-    mapping.update(__APP_URLS)
+    mapping.update(_MAPPINGS['url'])
 
     return mapping
 
@@ -147,7 +200,17 @@ def get_url_app_mapping():
     """Get a dictionary with URL to application mappings."""
 
     mapping = get_url_mapping()
-    for (app_name, url) in mapping.items():
-        mapping[url.lstrip('/')] = app_name
+    for (app_name, base_url) in mapping.items():
+        url = (base_url if base_url == '/' else base_url.lstrip('/'))
+        mapping[url] = app_name
+
+    return mapping
+
+
+def get_resource_mapping():
+    """Get a dictionary with resource mappings."""
+
+    mapping = {}
+    mapping.update(_MAPPINGS['resource'])
 
     return mapping

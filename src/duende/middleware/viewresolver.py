@@ -31,15 +31,14 @@
 import re
 import logging
 
-from webob import Request
 from paste.util.import_string import try_import_module
 from paste.deploy.converters import asbool
 
-from duende import REQUEST
 from duende import httpexc
 from duende import get_enabled_app_list
 from duende.lib import jsonrpc
 from duende.lib import urls
+from duende.lib import resource
 
 LOG = logging.getLogger(__name__)
 
@@ -53,125 +52,46 @@ class URLParseError(Exception):
     message = u'Wrong URL format'
 
 
-def get_view_module_parts(url):
-    """Parse a URL and return a tuple with view module path info
-
-    Function return a 3-tuple with application name, path to module where
-    view is defined and the name of the view that will handle given URL.
-    Non alphanumeric characters are removed from URL, with exception of
-    view name that will use an underscore '_' where a non alphanumeric
-    character is found.
-    All characters will be tranformed to lowercase.
-    When no module name is available in URL "root" s used as module name.
-
-    A tipical URL like:
-        /app-name/path-to/module-name/view-name/
-    will result in:
-        (u'appname', u'pathto.modulename', u'view_name')
-
-    """
-
-    #tidy URL before processing
-    url = url.strip(u'/')
-    url = url.lower()
-
-    url_path_list = url.split(u'/')
-    if len(url_path_list) < 2:
-        raise URLParseError()
-
-    view_name = url_path_list[-1]
-    #replace invalid URL chars with underscore
-    view_name = RE_INVALID_URL_CHARS.sub(u'_', view_name)
-
-    #remove view name from list and leave only valid
-    #charactes for each name in URL path
-    url_path_list = url_path_list[:-1]
-    url_path_list = [RE_INVALID_URL_CHARS.sub(u'', name) \
-                     for name in url_path_list]
-
-    #get app name and path to module where view
-    #for current URL is located
-    app_name = url_path_list[0]
-    module_path = u'.'.join(url_path_list[1:])
-    if not module_path:
-        #when no module path is available use
-        #name for default module
-        module_path = u'root'
-
-    return (app_name, module_path, view_name)
-
-
 class ViewResolverMiddleware:
     """Middleware in charge of resolving URL to view"""
 
-    def __init__(self, config):
+    def __init__(self, application, config):
+        self.application = application
         self.config = config
-        urls.init_application_urls(config['url.file'])
         self.enabled_app_list = get_enabled_app_list()
         self.url_app_mapping = urls.get_url_app_mapping()
+        self.resource_mapping = urls.get_resource_mapping()
 
     def __call__(self, environ, start_response):
-        config = self.config
-        debug_enabled = asbool(self.config['debug'])
+        view_handler = self.resolve_view_handler(environ)
+        environ['duende.view'] = view_handler
 
-        LOG.debug(u'Resolving view handler')
-        try:
-            view_handler = self.resolve_view_handler()
-            response = view_handler(REQUEST)
-        except httpexc.HTTPException, exc:
-            #on HTTP errors create a proper response from exception
-            response = REQUEST.get_response(exc)
-        except Exception:
-            LOG.exception(u'Unable to get response')
-            #when debugging raise error
-            if debug_enabled:
-                raise
+        return self.application(environ, start_response)
 
-            #when JSON-RPC is used return JSON result
-            http_requested_with = REQUEST.headers['X-Requested-With']
-            is_xmlhttp = (http_requested_with == 'XMLHttpRequest')
-            if is_xmlhttp and REQUEST.headers['Accept'] == 'application/json':
-                err = jsonrpc.JSONInternalError()
-                response = jsonrpc.get_reponse(err)
-            else:
-                #TODO: Display nice internal server error page
-                err = httpexc.HTTPInternalServerError()
-                response = REQUEST.get_response(exc)
-
-        if debug_enabled and asbool(config.get('debug.requests', 'false')):
-            #log request status and URL
-            LOG.error(u'[%s] %s', response.status, REQUEST.url)
-
-        return response(environ, start_response)
-
-    def resolve_view_handler(self):
+    def resolve_view_handler(self, environ):
         """Get view handler for current request"""
 
+        LOG.debug(u'Resolving view handler')
         view = None
-        #initialize module path for view handler
-        url = REQUEST.path_info
-        if url == '/' or not url:
-            url = self.config['url.default']
+        #tidy URL before processing
+        url = environ['PATH_INFO'].strip(u'/')
+        url = url.lower()
+
+        #check if its a resource
+        if url in self.resource_mapping:
+            resource_uri = self.resource_mapping[url]
+
+            return resource.get_view_handler(resource_uri)
 
         try:
-            (app_name, module_path, view_name) = get_view_module_parts(url)
+            (app, module_path, view_name) = self.get_view_module_parts(url)
         except URLParseError:
-            LOG.error(u'Unable get view handler for URL %s', url)
+            LOG.error(u'Unable get view handler for URL /%s', url)
 
             raise httpexc.HTTPNotFound()
 
-        #get name of application module for current url application name
-        app_module_name = self.url_app_mapping.get(app_name)
-
-        #first check for non namespaced enabled application names
-        disabled_app = (app_module_name not in self.enabled_app_list)
-
-        #view name can't start with underscore
-        if view_name.startswith('_') or disabled_app:
-            raise httpexc.HTTPNotFound()
-
-        module_path = '%s.view.%s' % (app_module_name, module_path)
-        LOG.debug(u'Request view module: %s', module_path)
+        module_path = '%s.view.%s' % (app, module_path)
+        LOG.debug(u'Request view: %s.%s()', module_path, view_name)
 
         #import view module and get handler
         module = try_import_module(module_path)
@@ -181,7 +101,70 @@ class ViewResolverMiddleware:
             #when handler is not found raise HTTP 404
             raise httpexc.HTTPNotFound()
 
-        #store current application name inside request
-        REQUEST.environ['duende.application'] = app_module_name
+        #store current application name inside environment
+        environ['duende.application'] = app
 
         return view
+
+    def get_view_module_parts(self, url):
+        """Parse a URL and return a tuple with view module path info
+
+        Function return a 3-tuple with app module name, path to module where
+        view is defined and the name of the view that will handle given URL.
+        Non alphanumeric characters are removed from URL, with exception of
+        view name that will use an underscore '_' where a non alphanumeric
+        character is found.
+        All characters will be tranformed to lowercase.
+        When no module name is available in URL "root" s used as module name.
+
+        A tipical URL like:
+            /app/path-to/module-name/view-name/
+        will result in:
+            (u'app', u'pathto.modulename', u'view_name')
+
+        """
+
+        #set default return values
+        app = root_app = self.url_app_mapping.get('/')
+        module_path = 'root'
+        view_name = 'index'
+        url_path_list = []
+
+        if url:
+            url_path_list = url.split(u'/')
+
+        url_path_count = len(url_path_list)
+        #get view name when URL has at least one path element
+        if url_path_count:
+            #TODO: when count is 1 check if view_name is an app ?
+            view_name = url_path_list[-1]
+            #view name can't start with underscore
+            if view_name.startswith('_'):
+                raise httpexc.HTTPNotFound()
+
+            #replace invalid URL chars with underscore
+            view_name = RE_INVALID_URL_CHARS.sub(u'_', view_name)
+
+        #get the reast of the URL elements
+        if url_path_count > 1:
+            #remove view name from list and leave only valid
+            #charactes for each name in URL path
+            url_path_list = url_path_list[:-1]
+            url_path_list = [RE_INVALID_URL_CHARS.sub(u'', name) \
+                             for name in url_path_list]
+
+            #init base app URL
+            base_app_url = url_path_list[0]
+            #get name of application module for current url application name
+            app = self.url_app_mapping.get(base_app_url)
+            #when and app for URL does not exist use root application URL
+            if app not in self.enabled_app_list:
+                #get root application
+                app = root_app
+                #get path to module where view for current URL is located
+                module_path = u'.'.join(url_path_list)
+            elif url_path_count > 2:
+                #set module path only when is available in URL
+                module_path = u'.'.join(url_path_list[1:])
+
+        return (app, module_path, view_name)

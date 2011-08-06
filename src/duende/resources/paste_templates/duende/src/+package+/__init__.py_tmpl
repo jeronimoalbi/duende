@@ -14,7 +14,14 @@ _ = translation.get_translation_fn(__name__)
 ngettext = translation.get_plural_translation_fn(__name__)
 
 
-def url(url, app='${package}'):
-    """Get a ${package} url"""
+def url(uri, *args, **kwargs):
+    """Get a ${package} url
 
-    return urls.url(app, url)
+    Return a URL instance.
+
+    """
+
+    if '://' not in uri:
+        uri = u'${package}:' + uri
+
+    return urls.url(uri, *args, **kwargs)

@@ -28,39 +28,13 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-import logging
-import mimetypes
-
-from paste import fileapp
 from paste import urlparser
 
-#types that should be served as UTF8
-UTF_TYPES = (
-    'text/css',
-    'application/x-javascript',
-    'application/javascript',
-    'text/html',
-    'text/xml',
-    'application/xml',
-    'application/xhtml+xm',
-    'text/plain',
-    'text/csv',
-)
+from duende.lib.resource import create_file_response
 
 
 class StaticContentMiddleware(urlparser.StaticURLParser):
     """Static contents serving middleware"""
 
     def make_app(self, file_name):
-        (content_type, encoding) = mimetypes.guess_type(file_name)
-
-        #set utf8 for known types
-        if content_type in UTF_TYPES:
-            content_type = content_type + '; charset=utf8'
-
-        headers = [
-            ('Content-Type', content_type)
-        ]
-        application = fileapp.FileApp(file_name, content_type=content_type)
-
-        return application
+        return create_file_response(file_name)

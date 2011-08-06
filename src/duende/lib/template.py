@@ -42,11 +42,13 @@ from jinja2 import nodes
 from jinja2.utils import Markup
 from jinja2.utils import contextfunction
 from jinja2.ext import InternationalizationExtension
+from paste.deploy.converters import asbool
 
 from duende import REQUEST
 from duende import Response
 from duende import get_enabled_app_list
 from duende.lib import flash
+from duende.lib import urls
 
 LOG = logging.getLogger(__name__)
 
@@ -381,6 +383,10 @@ def init_template_environment(config):
     environ_params['bytecode_cache'] = bytecode_cache
     ENVIRON = Environment(**environ_params)
 
-    #TODO: Add environment context values.
-    #See hot to make it extensible by applications
-    #ENVIRON.globals.update(get_context())
+    #TODO: Allow apps to add context values
+    context = {}
+    context['url'] = urls.url
+    context['DEBUG'] = asbool(config['debug'])
+
+    #update template environment
+    ENVIRON.globals.update(context)

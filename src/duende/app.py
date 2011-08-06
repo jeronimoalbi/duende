@@ -40,43 +40,41 @@ from beaker.middleware import SessionMiddleware
 from beaker.cache import CacheManager
 
 from duende import get_enabled_app_list
-from duende import get_resource_dir
 from duende.lib import urls
-from duende.middleware.requestcontext import RequestContextMiddleware
+from duende.lib.resource import get_resource_dir
+from duende.lib.config import CONFIG
+from duende.middleware.duendeapp import DuendeApplication
+from duende.middleware.auth import AuthMiddleware
+from duende.middleware.error import ErrorMiddleware
 from duende.middleware.viewresolver import ViewResolverMiddleware
 from duende.middleware.staticcontent import StaticContentMiddleware
 from duende.middleware.flashmessage import FlashMessageMiddleware
-from duende.middleware.locale import LocaleMiddleware
-from duende.middleware.database import DatabaseMiddleware
-from duende.middleware.template import TemplateMiddleware
 
 
 def app_factory(global_config, **local_conf):
     """Create a WSGI application instance."""
 
-    config = global_config.copy()
-    config.update(local_conf)
+    global CONFIG
 
-    application = ViewResolverMiddleware(config)
+    CONFIG.update_values(global_config.copy())
+    CONFIG.update_values(local_conf)
+
+    application = DuendeApplication(CONFIG)
+    application = AuthMiddleware(application, CONFIG)
+    application = ViewResolverMiddleware(application, CONFIG)
     application = FlashMessageMiddleware(application)
-    application = RequestContextMiddleware(application)
-    application = DatabaseMiddleware(application, config)
-    application = TemplateMiddleware(application, config)
-    application = LocaleMiddleware(application, config)
     application = RegistryManager(application)
-    application = ConfigMiddleware(application, config)
-    application = SessionMiddleware(application, config)
+    #application = ConfigMiddleware(application, CONFIG)
+    application = SessionMiddleware(application, CONFIG)
+    application = ErrorMiddleware(application, CONFIG)
 
-    if asbool(config['debug']):
-        if asbool(config.get('debug.multiprocess', 'false')):
+    if asbool(CONFIG['debug']):
+        if asbool(CONFIG.get('debug.multiprocess')):
             #This middleware supports multithread
             application = CgitbMiddleware(application, {'debug': True})
         else:
             #display errors to client when debug is enabled
             application = EvalException(application)
-    else:
-        #TODO: Add a middleware to display nice error pages
-        pass
 
     return application
 

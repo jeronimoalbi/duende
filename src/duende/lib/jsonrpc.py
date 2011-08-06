@@ -39,18 +39,35 @@ from datetime import datetime
 from datetime import date
 from datetime import time
 
+from paste.deploy.converters import asbool
+
 from duende import Response
 
 # JSON-RPC error codes:
-# New errors can go from -32099 to -32000
 PARSE_ERROR = -32700
 INVALID_REQUEST = -32600
 METHOD_NOT_FOUND = -32601
 INVALID_PARAMS = -32602
 INTERNAL_ERROR = -32603
+# Custom JSON-RPC error codes
+UNAUTHORIZED = 401
 
 
-def get_response(obj, version='2.0'):
+def is_xmlhttp_request(environ):
+    """Check if an environ belongs to an XMLHttPRequest"""
+
+    http_requested_with = environ.get('HTTP_X_REQUESTED_WITH')
+
+    return (http_requested_with == 'XMLHttpRequest')
+
+
+def request_accept_json(environ):
+    """Check if a request accepts application/json response"""
+
+    return ('application/json' in environ['HTTP_ACCEPT'])
+
+
+def get_response(obj, version='2.0', compact=False):
     """Create a JSON-RPC Response for given object
 
     Response will use JSON-RPC version 2.0 by default.
@@ -69,6 +86,7 @@ def get_response(obj, version='2.0'):
         contents['result'] = obj
 
     response = JSONResponse()
+    response.compact_mode = compact
     response.body = contents
 
     return response
@@ -95,8 +113,7 @@ def simplejson_dumps(value, compact_mode=False):
     dump_kwargs['use_decimal'] = True
     dump_kwargs['default'] = simplejson_default
 
-    if compact_mode or not asbool(CONFIG['debug']):
-        #when debug=false use compact JSON mode
+    if compact_mode:
         dump_kwargs['separators'] = (',', ':')
 
     return simplejson.dumps(value, **dump_kwargs)
@@ -134,10 +151,11 @@ class JSONResponse(Response):
 class JSONRPCError(Exception):
     """Base class for JSON-RPC errors"""
 
-    def __init__(self, code, message, data=None):
+    def __init__(self, code, message, data=None, compact=False):
         self.code = code
         self.message = message
         self.data = data
+        self.compact = compact
 
     def get_dict(self):
         """Get dictionary representation of the error"""
@@ -149,6 +167,11 @@ class JSONRPCError(Exception):
 
         return value
 
+    def __call__(self, environ, start_response):
+        response = get_response(self, compact=self.compact)
+
+        return response(environ, start_response)
+
 
 class JSONRPCCustomError(JSONRPCError):
     """Base class to define custom JSON-RPC errors"""
@@ -156,7 +179,7 @@ class JSONRPCCustomError(JSONRPCError):
     code = None
     message = None
 
-    def __init__(self, data=None):
+    def __init__(self, data=None, **kwargs):
         if not self.code:
             raise Exception(u'Error code not defined')
 
@@ -164,7 +187,7 @@ class JSONRPCCustomError(JSONRPCError):
             raise Exception(u'Error message not defined')
 
         super(JSONRPCCustomError, self).__init__(self.code, self.message,
-                                                 data=data)
+                                                 data=data, **kwargs)
 
 
 class JSONPRPCParseError(JSONRPCCustomError):
@@ -190,3 +213,8 @@ class JSONRPCInvalidParams(JSONRPCCustomError):
 class JSONRPCInternalError(JSONRPCCustomError):
     code = INTERNAL_ERROR
     message = u'Internal error'
+
+
+class JSONRPCUnauthorized(JSONRPCCustomError):
+    code = UNAUTHORIZED
+    message = u'Unauthorized'

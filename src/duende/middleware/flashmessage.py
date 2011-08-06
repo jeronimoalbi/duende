@@ -28,6 +28,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+from duende.middleware import MiddlewareException
 from duende.lib.flash import Flash
 
 
@@ -38,6 +39,12 @@ class FlashMessageMiddleware:
         self.application = application
 
     def __call__(self, environ, start_response):
-        environ['duende.flash'] = Flash()
+        if 'beaker.session' not in environ:
+            msg = u'Beaker SessionMiddleware is not enabled'
+
+            raise MiddlewareException(msg)
+
+        session_manager = environ['beaker.session']
+        environ['duende.flash'] = Flash(session_manager)
 
         return self.application(environ, start_response)
