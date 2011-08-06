@@ -16,6 +16,13 @@ url.prefix = /
 # Comment: When url.prefix id not /, it will always be prefixed to these URL
 url.file = %(here)s/urls.ini
 
+# Login page for user autentication
+# Value can be a URL relative to "url.prefix" or a uri like app_name:/app_url
+auth.login = /login
+
+# Default access policy for views. When false all views are private by default
+auth.default_public = true
+
 # Base URI where static files for each app are located
 static.uri = /static
 
@@ -45,7 +52,7 @@ session.lock_dir = %(here)s/var/sessions/lock
 #session.url =
 
 # Session secret seed to use as key for HMAC (CHANGE THIS VALUE !!)
-session.secret = msofg.36fgg5
+session.secret = msofg.96fgr5
 
 # Instead of session.secret is possible to use AES encription to avoid
 # user from decoding cookie session data. To use this you need to install
@@ -71,9 +78,9 @@ template.cache_dir = %(here)s/var/templates/cache
 
 # Database connection URL
 # For example:
-#     sqlite:///%(here)s/duende.sqlite
+#     sqlite:///%(here)s/snakes.sqlite
 #     postgresql://username:password@host:port/database
-database.url = sqlite://%(here)s/duende.sqlite
+database.url = sqlite://%(here)s/duende.db
 
 # Number of connection to keep open
 #database.pool_size = 5

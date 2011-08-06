@@ -47,9 +47,9 @@ class AuthMiddleware:
     def __init__(self, application, config):
         self.application = application
         self.config = config
-        self.debug = asbool(self.config['debug'])
-        self.default_public = asbool(self.config['auth.default_public'])
-        self.login_url = urls.url(self.config.get('auth.login'))
+        self.debug = asbool(config['debug'])
+        self.default_public = asbool(config['auth.default_public'])
+        self.login_url = urls.url(config.get('auth.login'))
 
     def _handle_unauthorized(self, environ):
         LOG.info(u'Unauthorized request from %s', environ['REMOTE_ADDR'])
