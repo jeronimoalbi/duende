@@ -59,6 +59,21 @@ def execute(sql, **kwargs):
 class BaseModel(object):
     """Base class for models"""
 
+    def __repr__(self):
+        cls_name = self.__class__.__name__
+        description = str(self)
+
+        if description:
+            text = '<%s: %s>' % (cls_name, description)
+        else:
+            text = '<%s>' % cls_name
+
+        return text
+
+    def __str__(self):
+        #call unicode to get value and encode str as UTF8
+        return unicode(self).encode('utf8')
+
     @staticmethod
     def new_session():
         """Create a new Session
