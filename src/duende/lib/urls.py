@@ -28,11 +28,12 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-import logging
-import urllib
 import ConfigParser
+import logging
 import re
 import unicodedata
+import urllib
+import urlparse
 
 from duende.lib.config import CONFIG
 
@@ -239,3 +240,48 @@ def slugify(text):
     text = unicode(text.strip())
 
     return SLUG_HYPENATE_RE.sub('-', text.lower())
+
+
+def url_quote(url):
+    """Quote a URL that has unicode characters in path and param names
+
+    Return a unicode.
+
+    """
+
+    if not isinstance(url, unicode):
+        url = unicode(url)
+
+    (scheme, netloc, path, query, fragment) = urlparse.urlsplit(url)
+
+    #TODO: Check if is good to let it fail
+    path = path.encode('utf8', 'ignore')
+    path = unicode(urllib.quote(path))
+    query = query.encode('utf8')
+    query = unicode(urllib.quote(query, '=&/'))
+
+    url_parts = (scheme, netloc, path, query, fragment)
+
+    return urlparse.urlunsplit(url_parts)
+
+
+def url_unquote(url):
+    """Unquote a URL that was quoted using url_quote
+
+    Return a unicode.
+
+    """
+
+    if not isinstance(url, unicode):
+        url = unicode(url)
+
+    (scheme, netloc, path, query, fragment) = urlparse.urlsplit(url)
+
+    path = path.encode('utf8')
+    path = unicode(urllib.unquote(path), 'utf8')
+    query = query.encode('utf8')
+    query = unicode(urllib.unquote(query), 'utf8')
+
+    url_parts = (scheme, netloc, path, query, fragment)
+
+    return urlparse.urlunsplit(url_parts)
