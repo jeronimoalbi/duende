@@ -1,6 +1,6 @@
-Snakes Flow
+Duende framework
 
-Copyright (c) 2011, Jerónimo José Albi <jeronimoalbi@gmail.com>
+Copyright (c) 2011, Jerónimo José Albi <jeronimo.albi@gmail.com>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
