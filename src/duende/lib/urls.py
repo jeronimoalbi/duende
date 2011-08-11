@@ -31,10 +31,16 @@
 import logging
 import urllib
 import ConfigParser
+import re
+import unicodedata
 
 from duende.lib.config import CONFIG
 
 LOG = logging.getLogger(__name__)
+
+#slugify regexps
+SLUG_INVALID_RE = re.compile(r'[^\w\s-]')
+SLUG_HYPENATE_RE = re.compile(r'[-\s]+')
 
 _MAPPINGS = {}
 
@@ -214,3 +220,22 @@ def get_resource_mapping():
     mapping.update(_MAPPINGS['resource'])
 
     return mapping
+
+
+def slugify(text):
+    """Convert any string to a safe ASCII string
+
+    It can be used for file names that can have
+    invalid characters and also for URLs.
+
+    """
+
+    if not isinstance(text, unicode):
+        text = unicode(text)
+
+    text = unicodedata.normalize('NFKD', text)
+    text = text.encode('ascii', 'ignore')
+    text = SLUG_INVALID_RE.sub('', text)
+    text = unicode(text.strip())
+
+    return SLUG_HYPENATE_RE.sub('-', text.lower())
