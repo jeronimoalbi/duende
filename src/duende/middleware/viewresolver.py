@@ -49,7 +49,8 @@ RE_INVALID_URL_CHARS = re.compile(ur'[^a-zA-Z0-9]')
 class URLParseError(Exception):
     """Exception raised when parsing an URL with invalid format"""
 
-    message = u'Wrong URL format'
+    def __str__(self):
+        return 'Wrong URL format'
 
 
 class ViewResolverMiddleware:

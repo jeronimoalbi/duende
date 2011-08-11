@@ -31,17 +31,17 @@
 import ConfigParser
 import logging
 import re
-import unicodedata
 import urllib
 import urlparse
 
 from duende.lib.config import CONFIG
+from duende.lib.text import SLUG_HYPENATE_RE
+from duende.lib.text import utf8_to_unicode
 
 LOG = logging.getLogger(__name__)
 
 #slugify regexps
-SLUG_INVALID_RE = re.compile(r'[^\w\s-]')
-SLUG_HYPENATE_RE = re.compile(r'[-\s]+')
+SLUG_INVALID_PATH_RE = re.compile(ur'[^//\w\s-]', re.UNICODE)
 
 _MAPPINGS = {}
 
@@ -223,42 +223,52 @@ def get_resource_mapping():
     return mapping
 
 
-def slugify(text):
-    """Convert any string to a safe ASCII string
+def url_slugify(url, quote=False):
+    """Slugify path for given URL
 
-    It can be used for file names that can have
-    invalid characters and also for URLs.
+    Convert URL path letters to lowercase and replace spaces for -.
 
     """
 
-    if not isinstance(text, unicode):
-        text = unicode(text)
+    url = utf8_to_unicode(url)
+    (scheme, netloc, path, query, fragment) = urlparse.urlsplit(url)
 
-    text = unicodedata.normalize('NFKD', text)
-    text = text.encode('ascii', 'ignore')
-    text = SLUG_INVALID_RE.sub('', text)
-    text = unicode(text.strip())
+    path = SLUG_INVALID_PATH_RE.sub('', path)
+    path = unicode(path.strip())
+    path = SLUG_HYPENATE_RE.sub('-', path.lower())
+    if quote:
+        path = urllib.quote(path.encode('utf8'))
 
-    return SLUG_HYPENATE_RE.sub('-', text.lower())
+    path = unicode(path.strip())
+
+    url_parts = (scheme, netloc, path, query, fragment)
+
+    return urlparse.urlunsplit(url_parts)
 
 
-def url_quote(url):
+def url_quote(url, safe=None):
     """Quote a URL that has unicode characters in path and param names
 
     Return a unicode.
 
     """
 
-    if not isinstance(url, unicode):
-        url = unicode(url)
+    url = utf8_to_unicode(url)
+
+    if not safe:
+        safe = '/'
+    elif '/' not in safe:
+        safe = safe + '/'
 
     (scheme, netloc, path, query, fragment) = urlparse.urlsplit(url)
 
     #TODO: Check if is good to let it fail
     path = path.encode('utf8', 'ignore')
-    path = unicode(urllib.quote(path))
+    path = unicode(urllib.quote(path, safe=safe))
+
+    safe = safe + '=&'
     query = query.encode('utf8')
-    query = unicode(urllib.quote(query, '=&/'))
+    query = unicode(urllib.quote(query, safe=safe))
 
     url_parts = (scheme, netloc, path, query, fragment)
 
@@ -272,9 +282,7 @@ def url_unquote(url):
 
     """
 
-    if not isinstance(url, unicode):
-        url = unicode(url)
-
+    url = utf8_to_unicode(url)
     (scheme, netloc, path, query, fragment) = urlparse.urlsplit(url)
 
     path = path.encode('utf8')
