@@ -29,12 +29,7 @@ setup(
     zip_safe=False,
     packages=find_packages('src'),
     package_dir={'': 'src'},
-    package_data={
-        'duende': [
-            'resources/locale/*',
-            'resources/paste_template/*',
-        ],
-    },
+    include_package_data=True,
     classifiers=[
         "Intended Audience :: Developers",
         "License :: OSI Approved :: BSD License",
