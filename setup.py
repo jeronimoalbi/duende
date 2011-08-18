@@ -11,6 +11,7 @@ setup(
     author_email='jeronimo.albi@gmail.com',
     description='Duende web framework',
     long_description='',
+    url='https://github.com/jeronimoalbi/duende',
     keywords='web wsgi framework sqlalchemy formencode jinja2 templates',
     license='BSD',
     scripts=[],
