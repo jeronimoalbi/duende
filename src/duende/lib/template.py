@@ -347,7 +347,6 @@ def render(request, template_name, context=None):
 
     #init environment for current request
     env = context['env'] = {}
-    env['app_name'] = request.environ['duende.application']
     #add flash object when available
     if 'duende.flash' in request.environ:
         env['flash'] = request.environ['duende.flash']

@@ -71,19 +71,21 @@ class DuendeApplication(object):
         global REQUEST
         global SESSION
 
-        if 'paste.registry' not in environ:
-            raise MiddlewareException(u'Paste RegistryManager is not enabled')
-
         if 'beaker.session' not in environ:
             msg = u'Beaker SessionMiddleware is not enabled'
 
             raise MiddlewareException(msg)
 
-        session_manager = environ['beaker.session']
-        environ['paste.registry'].register(SESSION, session_manager)
+        if 'paste.registry' not in environ:
+            raise MiddlewareException(u'Paste RegistryManager is not enabled')
+        else:
+            paste_registry = environ['paste.registry']
 
+        session_manager = environ['beaker.session']
         request = Request(environ)
-        environ['paste.registry'].register(REQUEST, request)
+        #register globals
+        paste_registry.register(SESSION, session_manager)
+        paste_registry.register(REQUEST, request)
 
     def _init_translations(self, environ):
         #TODO: Allow setting locale using request parameters
@@ -144,6 +146,11 @@ class DuendeApplication(object):
         self._init_locale(environ)
         self._init_globals(environ)
 
-        response = view_handler(REQUEST)
+        #init keyword arguments for view when available
+        view_kwargs = {}
+        if 'duende.view_kwargs' in environ:
+            view_kwargs.update(environ['duende.view_kwargs'])
+
+        response = view_handler(REQUEST, **view_kwargs)
 
         return response(environ, clear_start_response)
