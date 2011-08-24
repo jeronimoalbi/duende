@@ -14,7 +14,9 @@ setup(
     url='https://github.com/jeronimoalbi/duende',
     keywords='web wsgi framework sqlalchemy formencode jinja2 templates',
     license='BSD',
-    scripts=[],
+    scripts=[
+        'scripts/duende-export.py',
+    ],
     install_requires=[
         'simplejson',
         'Paste>=1.7',
