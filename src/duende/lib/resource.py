@@ -61,7 +61,7 @@ def get_resource_dir(app_name):
 
     try:
         info = require(app_name)
-    except pkg_resources.DistributionNotFound, err:
+    except pkg_resources.DistributionNotFound:
         #application is not installed so no resource is available
         return
 
@@ -86,9 +86,9 @@ def create_file_response(file_name):
         content_type = content_type + '; charset=utf8'
 
     #TODO: Add caching information
-    headers = [
-        ('Content-Type', content_type),
-    ]
+    #headers = [
+    #    ('Content-Type', content_type),
+    #]
 
     return fileapp.FileApp(file_name, content_type=content_type)
 
@@ -101,7 +101,7 @@ def resource_handler(uri, request):
 
     if protocol == 'url':
         #redirect to given URL
-        raise httpexc.HTTPFound(location=url)
+        raise httpexc.HTTPFound(location=uri)
 
     response = None
     if protocol == 'call':
@@ -120,7 +120,7 @@ def resource_handler(uri, request):
             if os.path.isfile(full_file_path):
                 response = create_file_response(full_file_path)
             else:
-                LOG.error(u'Invalid resource path: %s', full_file_path)    
+                LOG.error(u'Invalid resource path: %s', full_file_path)
     else:
         LOG.error(u'Unknown resource URI: %s', uri)
 

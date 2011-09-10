@@ -74,7 +74,7 @@ def guess_version(app_name, file_name):
 
         if base_path == info.location:
             version = info.version
-    except Exception, exc:
+    except Exception:
         pass
 
     return version

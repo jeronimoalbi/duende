@@ -36,7 +36,7 @@ from functools import wraps
 from jinja2 import Environment
 from jinja2 import PrefixLoader
 from jinja2 import PackageLoader
-from jinja2 import TemplateNotFound
+from jinja2 import TemplateAssertionError
 from jinja2 import FileSystemBytecodeCache
 from jinja2 import nodes
 from jinja2.utils import Markup
@@ -47,7 +47,6 @@ from paste.deploy.converters import asbool
 from duende import REQUEST
 from duende import Response
 from duende import get_enabled_app_list
-from duende.lib import flash
 from duende.lib import urls
 
 LOG = logging.getLogger(__name__)
@@ -359,6 +358,25 @@ def render(request, template_name, context=None):
     return template.render(**context)
 
 
+def get_enabled_app_extensions(config):
+    """Get a list of Jinja2 extension to load
+
+    List of extensions is getted fron config file value
+    for template.extensions
+
+    Jinja extension creation is documented here:
+        http://jinja.pocoo.org/docs/extensions/#module-jinja2.ext
+
+    """
+
+    extension_list = []
+    if 'template.extensions' in config:
+        extension_list = config['template.extensions'].split(',')
+        extension_list = [name.strip() for name in extension_list]
+
+    return extension_list
+
+
 def init_template_environment(config):
     """Initialize template support"""
 
@@ -375,14 +393,19 @@ def init_template_environment(config):
     bytecode_cache = FileSystemBytecodeCache(config['template.cache_dir'],
                                              '%s.cache')
 
+    #create a list with I18N extension and installed application extensions
+    app_extension_list = get_enabled_app_extensions(config)
+    extension_list = ['duende.lib.template.i18n']
+    extension_list.extend(app_extension_list)
+
     environ_params = {}
-    environ_params['extensions'] = ['duende.lib.template.i18n']
+    environ_params['extensions'] = extension_list
     environ_params['trim_blocks'] = True
     environ_params['loader'] = loader
     environ_params['bytecode_cache'] = bytecode_cache
     ENVIRON = Environment(**environ_params)
 
-    #TODO: Allow apps to add context values
+    #TODO: Allow apps to add context values here ?
     context = {}
     context['url'] = urls.url
     context['DEBUG'] = asbool(config['debug'])

@@ -76,8 +76,15 @@ session.secure = false
 # Directory for templates cache
 template.cache_dir = %(here)s/var/templates/cache
 
+# Jinja 2 extensions to add to template environment
+# Example:
+#     template.extensions = app_name.lib.extension
+#                         , app_name2.lib.another_extension
+#                         , app_name3.lib.extension.strip
+#template.extensions =
+
 # Database connection URL
-# For example:
+# Example:
 #     sqlite:///%(here)s/snakes.sqlite
 #     postgresql://username:password@host:port/database
 database.url = sqlite://%(here)s/duende.db
