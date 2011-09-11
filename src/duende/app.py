@@ -31,13 +31,13 @@
 import os
 
 from paste.deploy.converters import asbool
-from paste.deploy.config import ConfigMiddleware
 from paste.registry import RegistryManager
 from paste.cascade import Cascade
 from paste.cgitb_catcher import CgitbMiddleware
 from paste.evalexception import EvalException
 from beaker.middleware import SessionMiddleware
-from beaker.cache import CacheManager
+#TODO: Add beaker cache support
+#from beaker.cache import CacheManager
 
 from duende import get_enabled_app_list
 from duende.lib import urls
@@ -56,6 +56,7 @@ def app_factory(global_config, **local_conf):
 
     global CONFIG
 
+    #initialize global config object
     CONFIG.update_values(global_config.copy())
     CONFIG.update_values(local_conf)
 
@@ -64,7 +65,6 @@ def app_factory(global_config, **local_conf):
     application = ViewResolverMiddleware(application, CONFIG)
     application = FlashMessageMiddleware(application)
     application = RegistryManager(application)
-    #application = ConfigMiddleware(application, CONFIG)
     application = SessionMiddleware(application, CONFIG)
     application = ErrorMiddleware(application, CONFIG)
 
