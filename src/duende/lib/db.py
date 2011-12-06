@@ -30,6 +30,7 @@
 
 from sqlalchemy import MetaData
 from sqlalchemy import engine_from_config
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import object_mapper
@@ -137,6 +138,10 @@ class BaseModel(object):
         return session
 
 
+# define base model class for declarative definitions
+DeclarativeModel = declarative_base(name="DeclarativeModel", cls=BaseModel)
+
+
 class IterableModel(BaseModel):
     """Base class for models to allow iteration of fields.
 
@@ -165,6 +170,13 @@ class IterableModel(BaseModel):
         field_value = getattr(self, field_name)
 
         return (field_name, field_value)
+
+
+# define base model class for iterable declarative definitions
+IterableDeclarativeModel = declarative_base(
+    name="IterableDeclarativeModel",
+    cls=IterableModel,
+)
 
 
 def init_database_engine(config):
