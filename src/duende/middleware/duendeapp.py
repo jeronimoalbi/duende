@@ -33,7 +33,6 @@ import logging
 import babel
 import formencode
 
-from duende import SESSION
 from duende import REQUEST
 from duende import Request
 from duende.lib import db
@@ -53,8 +52,7 @@ class DuendeApplicationException(Exception):
 class DuendeApplication(object):
     """Middleware that register application context for current request
 
-    Register global application variables like SESSION and REQUEST,
-    database and template engines.
+    Register global application variables, database and template engines.
 
     """
 
@@ -69,7 +67,6 @@ class DuendeApplication(object):
 
     def _init_globals(self, environ):
         global REQUEST
-        global SESSION
 
         if 'beaker.session' not in environ:
             msg = u'Beaker SessionMiddleware is not enabled'
@@ -81,10 +78,9 @@ class DuendeApplication(object):
         else:
             paste_registry = environ['paste.registry']
 
-        session_manager = environ['beaker.session']
         request = Request(environ)
+        request.session = environ['beaker.session']
         #register globals
-        paste_registry.register(SESSION, session_manager)
         paste_registry.register(REQUEST, request)
 
     def _init_translations(self, environ):
