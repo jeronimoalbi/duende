@@ -28,54 +28,8 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-import os
-
-from pkg_resources import require
-
-from webob import exc as httpexc
-from paste.registry import StackedObjectProxy
-
-from duende.lib import urls
-from duende.lib.config import CONFIG
-from duende.lib.request import Request
-from duende.lib.response import Response
-
-CACHE = StackedObjectProxy(name='cache')
-REQUEST = StackedObjectProxy(name='request')
+from webob import response
 
 
-def get_enabled_app_list():
-    """Get a list with names of all enabled applications."""
-
-
-    mapping = urls.get_url_mapping()
-
-    return mapping.keys()
-
-
-def guess_version(app_name, file_name):
-    """Get current application version
-
-    Version can be successfuly getted when app is installed, and is being
-    imported from the installed directory (not from current location).
-
-    """
-
-    version = '(not installed)'
-    try:
-        info = require(app_name)[0]
-        base_path = os.path.dirname(file_name)
-        base_path = os.path.dirname(base_path)
-        #for applications with namespace we need to dig one more level
-        if '.' in app_name:
-            base_path = os.path.dirname(base_path)
-
-        if base_path == info.location:
-            version = info.version
-    except Exception:
-        pass
-
-    return version
-
-
-__version__ = guess_version('duende', __file__)
+class Response(response.Response):
+    """Base class for Duende responses."""
