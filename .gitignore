@@ -1,0 +1,15 @@
+*.pyc
+*.pyo
+*.tmp*
+*.mo
+*.egg-info
+*.egg
+*.EGG
+*.EGG-INFO
+bin
+build
+dist
+*~
+*.lock
+.DS_Store?
+*.swp
