@@ -27,13 +27,16 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-
-from sqlalchemy import MetaData
+from sqlalchemy import Column
 from sqlalchemy import engine_from_config
+from sqlalchemy import MetaData
+from sqlalchemy import Sequence
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import object_mapper
+from sqlalchemy.types import Integer
 
 META = MetaData()
 SESSION = None
@@ -138,8 +141,27 @@ class BaseModel(object):
         return session
 
 
+class BaseDeclarativeMixIn(object):
+    """MixIn with defaults for BaseDeclarative models."""
+    @declared_attr
+    def __tablename__(cls):
+        # by default table name is the name of model class in lower case
+        return cls.__name__.lower()
+
+    @declared_attr
+    def id(cls):
+        seq_name = cls.__tablename__ + "_id_seq"
+        return Column(Integer, Sequence(seq_name), primary_key=True)
+
+
+class BaseDeclarativeModel(BaseModel, BaseDeclarativeMixIn):
+    """Base model to use for declarative model definitions."""
+
+
 # define base model class for declarative definitions
-DeclarativeModel = declarative_base(name="DeclarativeModel", cls=BaseModel)
+DeclarativeModel = declarative_base(name="DeclarativeModel",
+                                    cls=BaseDeclarativeModel,
+                                    metadata=META)
 
 
 class IterableModel(BaseModel):
@@ -172,11 +194,14 @@ class IterableModel(BaseModel):
         return (field_name, field_value)
 
 
+class BaseIterableDeclarativeModel(IterableModel, BaseDeclarativeMixIn):
+    """Base model to use for declarative iterable model definitions."""
+
+
 # define base model class for iterable declarative definitions
-IterableDeclarativeModel = declarative_base(
-    name="IterableDeclarativeModel",
-    cls=IterableModel,
-)
+IterableDeclarativeModel = declarative_base(name="IterableDeclarativeModel",
+                                            cls=BaseIterableDeclarativeModel,
+                                            metadata=META)
 
 
 def init_database_engine(config):
@@ -189,6 +214,7 @@ def init_database_engine(config):
         'convert_unicode': True,
     }
     ENGINE = engine_from_config(config.copy(), **engine_kwds)
+    META.bind = ENGINE
 
 
 def init_database_session():
