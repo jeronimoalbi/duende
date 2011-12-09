@@ -32,11 +32,9 @@ import re
 import logging
 
 from paste.util.import_string import try_import_module
-from paste.deploy.converters import asbool
 
 from duende import httpexc
 from duende import get_enabled_app_list
-from duende.lib import jsonrpc
 from duende.lib import urls
 from duende.lib import resource
 

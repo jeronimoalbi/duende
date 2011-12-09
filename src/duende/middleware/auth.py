@@ -32,11 +32,9 @@ import logging
 
 from paste.deploy.converters import asbool
 
-from duende import SESSION
 from duende import httpexc
 from duende.lib import urls
 from duende.lib import jsonrpc
-from duende.middleware import MiddlewareException
 
 LOG = logging.getLogger(__name__)
 
@@ -60,7 +58,7 @@ class AuthMiddleware:
             compact_json = not self.debug
 
             raise jsonrpc.JSONRPCUnauthorized(compact=compact_json)
-        elif login_url:
+        elif self.login_url:
             LOG.debug(u'Redirecting to login page %s', self.login_url)
             #redirect non JSON requests to login page
             raise httpexc.HTTPFound(location=self.login_url)
