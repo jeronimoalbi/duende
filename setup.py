@@ -45,6 +45,9 @@ setup(
     ],
     entry_points="""
         [paste.paster_create_template]
-        duende=duende.lib.pastetemplate:DuendeProjectTemplate
+        duende = duende.lib.pastetemplate:DuendeProjectTemplate
+
+        [paste.paster_command]
+        shell = duende.lib.command:ShellCommand
     """,
 )
