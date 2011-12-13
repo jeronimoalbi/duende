@@ -27,17 +27,29 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-
+import code
 import os
 import sys
 
 from paste.deploy import loadapp
-from paste.script.command import Command
-from paste.script.command import BadCommand
+
+BANNER = "Duende interactive console"
 
 
-class ShellCommand(Command):
-    """Interactive shell for Duende
+class SimpleConsole(code.InteractiveConsole):
+    """Simple python console."""
+    def __call__(self, header=""):
+        try:
+            import readline
+        except ImportError:
+            print("warning: Module readline not available. Command "
+                  "line history and completion won't be available.")
+        
+        self.interact(header)
+
+
+def shell():
+    """Initialize an interactive shell for Duende.
 
     When a config file is not given as argument duende.ini will
     be used as default.
@@ -46,51 +58,34 @@ class ShellCommand(Command):
         # paster shell duende.ini
 
     """
+    if len(sys.argv) < 2:
+        config_file = 'duende.ini'
+    else:
+        config_file = sys.argv[1]
 
-    summary = __doc__.splitlines()[0]
-    usage = '\n' + __doc__
+    config_path = os.path.abspath(config_file)
+    if not os.path.isfile(config_path):
+        raise Exception(u'Config file %s not found' % config_path)
 
-    min_args = 0
-    max_args = 1
-    group_name = 'duende'
+    cur_dir = os.path.dirname(config_path)
+    if cur_dir not in sys.path:
+        sys.path.insert(0, cur_dir)
 
-    parser = Command.standard_parser(simulate=True)
+    print("Loading duende app config from {0}".format(config_path))
+    config_key = 'config:%s' % config_path
+    wsgiapp = loadapp(config_key)
 
-    def command(self):
-        self.verbose = 3
-        if len(self.args) == 0:
-            config_file = 'duende.ini'
-        else:
-            config_file = self.args[0]
+    try:
+        import IPython
 
-        if not os.path.isfile(config_file):
-            raise BadCommand(u'Config file %s not found' % config_file)
-
-        cur_dir = os.getcwd()
-
-        #use config options to init logging
-        self.logging_file_config(config_file)
-
-        if cur_dir not in sys.path:
-            sys.path.insert(0, cur_dir)
-
-        config_key = 'config:%s' % config_file
-        wsgiapp = loadapp(config_key, relative_to=cur_dir)
-
-        banner = u'Duende interactive console'
-        try:
+        if IPython.__version__ < '0.11':
             from IPython.Shell import IPShellEmbed
 
-            shell = IPShellEmbed(argv=self.args)
-            shell.set_banner(shell.IP.BANNER + '\n\n' + banner)
-            shell(local_ns={}, global_ns={})
-        except ImportError:
-            import code
-            shell = code.InteractiveConsole(locals={})
-
-            try:
-                import readline
-            except ImportError:
-                pass
-
-            shell.interact(banner)
+            shell = IPShellEmbed(['-quick'])
+        else:
+            from IPython import embed as shell
+    except ImportError:
+        # when ipython is not installed use normal console
+        shell = SimpleConsole()
+        
+    shell(header=BANNER)

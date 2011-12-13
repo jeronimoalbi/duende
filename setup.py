@@ -43,11 +43,12 @@ setup(
         "Topic :: Internet :: WWW/HTTP :: WSGI",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    entry_points="""
-        [paste.paster_create_template]
-        duende = duende.lib.pastetemplate:DuendeProjectTemplate
-
-        [paste.paster_command]
-        shell = duende.lib.command:ShellCommand
-    """,
+    entry_points={
+        'console_scripts': [
+            "duende_shell = duende.lib.command:shell",
+        ],
+        'paste.paster_create_template': [
+            "duende = duende.lib.pastetemplate:DuendeProjectTemplate",
+        ]
+    },
 )
